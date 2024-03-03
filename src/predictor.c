@@ -50,7 +50,8 @@ unsigned int ghistory_truncate;
 //        Predictor Functions         //
 //------------------------------------//
 
-
+// Initialize the predictor
+//
 void init_gshare(){
   ghistory = 0;
   ghistory_truncate = (1<<ghistoryBits) - 1;
@@ -79,8 +80,7 @@ void init_custom(){
     BHT[i] = WN;
   }
 }
-// Initialize the predictor
-//
+
 void init_predictor()
 {
   //
@@ -121,21 +121,20 @@ uint8_t prediction_gshare(uint32_t pc)
     return TAKEN;
   }
 }
+
 uint8_t prediction_tournament(uint32_t pc)
 {
   return TAKEN;
 }
+
 uint8_t prediction_custom(uint32_t pc)
 {
   return TAKEN;
 }
+
 //
 uint8_t make_prediction(uint32_t pc)
 {
-  //
-  //TODO: Implement prediction scheme
-  //
-
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
@@ -200,7 +199,6 @@ void train_gshare(uint32_t pc, uint8_t outcome)
   ghistory = (ghistory << 1) | outcome;
   ghistory = ghistory & ghistory_truncate;
 }
-//
 
 void train_tournament(uint32_t pc, uint8_t outcome)
 {
@@ -214,9 +212,6 @@ void train_custom(uint32_t pc, uint8_t outcome)
 
 void train_predictor(uint32_t pc, uint8_t outcome)
 {
-  //
-  //TODO: Implement Predictor training
-  //
   switch (bpType){
     case STATIC:
       break;
