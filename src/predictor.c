@@ -297,38 +297,9 @@ void train_custom(uint32_t pc, uint8_t outcome)
           perceptron[perceptron_idx][i] += ((outcome==TAKEN)? 1 :-1)*global_history_feat[i];
         }
     }
-      perceptron[perceptron_idx][ghistoryBits] += (outcome==TAKEN)? 1 :-1;
+      if (abs(perceptron[perceptron_idx][ghistoryBits]) < threshold)
+          perceptron[perceptron_idx][ghistoryBits] += (outcome==TAKEN)? 1 :-1;
   }
-
-  // if (outcome == TAKEN && perceptron_output < 0){
-    
-  //   // Updating Weights
-  //   for (int j = 0; j < ghistoryBits; j++){
-  //     if (global_history_feat[j] == 1 && perceptron[perceptron_idx][j] < 63){
-  //         perceptron[perceptron_idx][j]++;
-  //       }
-  //     else if (global_history_feat[j] == -1 && perceptron[perceptron_idx][j] > -64){
-  //         perceptron[perceptron_idx][j]--;
-  //       }
-  //   }
-  //   // Updating Bias
-  //   if (perceptron[perceptron_idx][ghistoryBits] < 63){
-  //     perceptron[perceptron_idx][ghistoryBits]++;
-  //   }
-  // }
-  // else if (outcome == NOTTAKEN && perceptron_output >= 0){
-  //   for (int j = 0; j < ghistoryBits; j++){
-  //     if (global_history_feat[j] == 1 && perceptron[perceptron_idx][j] > -64){
-  //         perceptron[perceptron_idx][j]--;
-  //       }
-  //     else if (global_history_feat[j] == -1 && perceptron[perceptron_idx][j] < 63){
-  //         perceptron[perceptron_idx][j]++;
-  //       }
-  //   }
-  //   if (perceptron[perceptron_idx][ghistoryBits] > -64){
-  //     perceptron[perceptron_idx][ghistoryBits]--;
-  //   }
-  // }
 
   // Update the global history
   // Shift the global history to the left by 1 and add the outcome

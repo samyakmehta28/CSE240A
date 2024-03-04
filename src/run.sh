@@ -7,7 +7,7 @@ EXECUTABLE="./predictor.exe"
 ZIPPED_FILES=("fp_1.bz2" "fp_2.bz2" "int_1.bz2"  "int_2.bz2" "mm_1.bz2" "mm_2.bz2")
 
 # List of parameters to pass to the executable
-PARAMS=("--gshare:13" "--tournament:9:10:10" "--custom:32:10")
+PARAMS=("--gshare:13" "--tournament:9:10:10" "--custom:12:10")
 
 # Make the executable
 echo "Make the Predictor executable"
