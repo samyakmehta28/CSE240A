@@ -32,11 +32,16 @@ int verbose;
 //------------------------------------//
 //      Predictor Data Structures     //
 //------------------------------------//
-unsigned int ghistory;
-unsigned int *lhistory;
-unsigned int *BHT;
-unsigned int ghistory_truncate;
 
+unsigned int ghistory;
+unsigned int ghistory_truncate;
+unsigned int lhistory_truncate;
+unsigned int pc_truncate;
+
+unsigned int *BHT_g;
+unsigned int *BHT_l;
+unsigned int *PHT;
+unsigned int *chooser;
 
 
 
@@ -55,30 +60,51 @@ unsigned int ghistory_truncate;
 void init_gshare(){
   ghistory = 0;
   ghistory_truncate = (1<<ghistoryBits) - 1;
-  BHT = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
+  BHT_g = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
   for (int i = 0; i < (1 << ghistoryBits); i++)
   {
-    BHT[i] = WN;
+    BHT_g[i] = WN;
   }
 }
 
 void init_tournament(){
   ghistory = 0;
   ghistory_truncate = (1<<ghistoryBits) - 1;
-  BHT = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
+  BHT_g = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
+  lhistory_truncate = (1<<lhistoryBits)-1;
+  BHT_l = (unsigned int *)malloc((1 << lhistoryBits) * sizeof(unsigned int));
+  PHT = (unsigned int *)malloc((1 << pcIndexBits) * sizeof(unsigned int));
+  chooser = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
+
   for (int i = 0; i < (1 << ghistoryBits); i++)
   {
-    BHT[i] = WN;
+    BHT_g[i] = WN;
   }
+  for (int i = 0; i < (1 << lhistoryBits); i++)
+  {
+    BHT_l[i] = WN;
+  }
+
+  for (int i = 0; i < (1 << pcIndexBits); i++)
+  {
+    PHT[i] = 0;
+  }
+
+  for (int i = 0; i < (1 << ghistoryBits); i++)
+  {
+    //chooser[i]=0 means Strong local
+    //chooser[i]=1 means weak local
+    //chooser[i]=2 means weak global
+    //chooser[i]=3 means Strong global
+    chooser[i] = 2;
+  }
+
+  pc_truncate = (1<<pcIndexBits)-1;
+
 }
 void init_custom(){
   ghistory = 0;
   ghistory_truncate = (1<<ghistoryBits) - 1;
-  BHT = (unsigned int *)malloc((1 << ghistoryBits) * sizeof(unsigned int));
-  for (int i = 0; i < (1 << ghistoryBits); i++)
-  {
-    BHT[i] = WN;
-  }
 }
 
 void init_predictor()
@@ -111,20 +137,23 @@ void init_predictor()
 uint8_t prediction_gshare(uint32_t pc)
 {
   unsigned int ind = (pc ^ ghistory) & ghistory_truncate;
-  unsigned int prediction = BHT[ind];
-  if (prediction == WN || prediction == SN)
-  {
-    return NOTTAKEN;
-  }
-  else
-  {
-    return TAKEN;
-  }
+  unsigned int prediction = BHT_g[ind];
+  uint8_t pred_outcome = prediction/2;
+  return pred_outcome;
 }
 
 uint8_t prediction_tournament(uint32_t pc)
 {
-  return TAKEN;
+  //gshare
+  unsigned int pred = BHT_g[ghistory];
+  if(chooser[ghistory]<2){
+    //local
+    unsigned int PHT_ind = pc ^ pc_truncate;
+    unsigned int lhistory = PHT[PHT_ind];
+    pred = BHT_l[lhistory];
+  }
+  uint8_t pred_out = pred/2;
+  return pred_out;
 }
 
 uint8_t prediction_custom(uint32_t pc)
@@ -162,35 +191,17 @@ uint8_t make_prediction(uint32_t pc)
 void train_gshare(uint32_t pc, uint8_t outcome)
 {
   unsigned int ind = (pc ^ ghistory) & ghistory_truncate;
-  unsigned int prediction = BHT[ind];
+  unsigned int prediction = BHT_g[ind];
   if (outcome == TAKEN)
   {
-    if (prediction == WN)
-    {
-      BHT[ind] = WT;
-    }
-    else if (prediction == SN)
-    {
-      BHT[ind] = WN;
-    }
-    else if (prediction == WT)
-    {
-      BHT[ind] = ST;
+    if(BHT_g[ind]<3){
+      BHT_g[ind]=BHT_g[ind]+1;
     }
   }
   else
   {
-    if (prediction == WN)
-    {
-      BHT[ind] = SN;
-    }
-    else if (prediction == WT)
-    {
-      BHT[ind] = WN;
-    }
-    else if (prediction == ST)
-    {
-      BHT[ind] = WT;
+    if(BHT_g[ind]>0){
+      BHT_g[ind]=BHT_g[ind]-1;
     }
   }
   // Update the global history
@@ -202,7 +213,45 @@ void train_gshare(uint32_t pc, uint8_t outcome)
 
 void train_tournament(uint32_t pc, uint8_t outcome)
 {
-  int x =  3;
+  unsigned int pred_g = BHT_g[ghistory];
+
+  unsigned int PHT_ind = pc ^ pc_truncate;
+  unsigned int lhistory = PHT[PHT_ind];
+  unsigned int pred_l = BHT_l[lhistory];
+  uint8_t pred_g_out = pred_g/2;
+  uint8_t pred_l_out = pred_l/2;
+  if (pred_g_out != pred_l_out){
+    if(outcome == pred_g_out && chooser[ghistory]<3){
+      chooser[ghistory] = chooser[ghistory]+1;
+    }
+    else if(outcome == pred_l_out && chooser[ghistory]>0){
+      chooser[ghistory] = chooser[ghistory]-1;
+    }
+  }
+
+  if(outcome == NOTTAKEN){
+    if(pred_l>0){
+      BHT_l[lhistory] = pred_l - 1;
+    }
+    if(pred_g>0){
+      BHT_g[ghistory] = pred_g - 1;
+    }
+  }
+  else{
+    if(pred_l<3){
+      BHT_l[lhistory] = pred_l + 1;
+    }
+    if(pred_g<3){
+      BHT_g[ghistory] = pred_g + 1;
+    }
+  }
+  ghistory = (ghistory << 1) | outcome;
+  ghistory = ghistory & ghistory_truncate;
+
+  lhistory = (lhistory << 1) | outcome;
+  lhistory = lhistory & lhistory_truncate;
+  PHT[PHT_ind] = lhistory;
+
 }
 
 void train_custom(uint32_t pc, uint8_t outcome)
