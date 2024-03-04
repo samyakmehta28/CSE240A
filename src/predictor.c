@@ -139,6 +139,7 @@ uint8_t prediction_gshare(uint32_t pc)
   unsigned int ind = (pc ^ ghistory) & ghistory_truncate;
   unsigned int prediction = BHT_g[ind];
   uint8_t pred_outcome = prediction/2;
+  //printf("%d",pred_outcome);
   return pred_outcome;
 }
 
@@ -148,11 +149,12 @@ uint8_t prediction_tournament(uint32_t pc)
   unsigned int pred = BHT_g[ghistory];
   if(chooser[ghistory]<2){
     //local
-    unsigned int PHT_ind = pc ^ pc_truncate;
+    unsigned int PHT_ind = pc & pc_truncate;
     unsigned int lhistory = PHT[PHT_ind];
     pred = BHT_l[lhistory];
   }
   uint8_t pred_out = pred/2;
+  //printf("%d",pred_out);
   return pred_out;
 }
 
@@ -213,13 +215,14 @@ void train_gshare(uint32_t pc, uint8_t outcome)
 
 void train_tournament(uint32_t pc, uint8_t outcome)
 {
+  //printf(" Training ");
   unsigned int pred_g = BHT_g[ghistory];
-
-  unsigned int PHT_ind = pc ^ pc_truncate;
+  unsigned int PHT_ind = pc & pc_truncate;
   unsigned int lhistory = PHT[PHT_ind];
   unsigned int pred_l = BHT_l[lhistory];
   uint8_t pred_g_out = pred_g/2;
   uint8_t pred_l_out = pred_l/2;
+  //printf(" Training ");
   if (pred_g_out != pred_l_out){
     if(outcome == pred_g_out && chooser[ghistory]<3){
       chooser[ghistory] = chooser[ghistory]+1;
@@ -251,7 +254,6 @@ void train_tournament(uint32_t pc, uint8_t outcome)
   lhistory = (lhistory << 1) | outcome;
   lhistory = lhistory & lhistory_truncate;
   PHT[PHT_ind] = lhistory;
-
 }
 
 void train_custom(uint32_t pc, uint8_t outcome)
