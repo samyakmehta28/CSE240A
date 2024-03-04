@@ -101,8 +101,9 @@ handle_option(char *arg)
   } else if (!strncmp(arg,"--tournament:",13)) {
     bpType = TOURNAMENT;
     sscanf(arg+13,"%d:%d:%d", &ghistoryBits, &lhistoryBits, &pcIndexBits);
-  } else if (!strcmp(arg,"--custom")) {
+  } else if (!strncmp(arg,"--custom:", 9)) {
     bpType = CUSTOM;
+    sscanf(arg+9,"%d:%d", &ghistoryBits, &pcIndexBits);
   } else if (!strcmp(arg,"--verbose")) {
     verbose = 1;
   } else {
@@ -157,9 +158,10 @@ main(int argc, char *argv[])
       stream = fopen(argv[i], "r");
     }
   }
-
+  
   // Initialize the predictor
   init_predictor();
+  // printf("init_predictor (main) success\n");
 
   uint32_t num_branches = 0;
   uint32_t mispredictions = 0;
@@ -172,6 +174,7 @@ main(int argc, char *argv[])
 
     // Make a prediction and compare with actual outcome
     uint8_t prediction = make_prediction(pc);
+    // printf("make_prediction (main) success\n");
     if (prediction != outcome) {
       mispredictions++;
     }
@@ -181,6 +184,7 @@ main(int argc, char *argv[])
 
     // Train the predictor
     train_predictor(pc, outcome);
+    // printf("train_predictor (main) success\n");
   }
 
   // Print out the mispredict statistics

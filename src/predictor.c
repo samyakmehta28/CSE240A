@@ -43,13 +43,11 @@ unsigned int *BHT_l;
 unsigned int *PHT;
 unsigned int *chooser;
 
-
-
-
-//
-//TODO: Add your own Branch Predictor data structures here
-//
-
+// Data Structures for Perceptron (Custom Predictor)
+int **perceptron;
+int *global_history_feat;
+int perceptron_output;
+unsigned int perceptron_idx_truncate;
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -102,9 +100,27 @@ void init_tournament(){
   pc_truncate = (1<<pcIndexBits)-1;
 
 }
+
 void init_custom(){
+  // Implement Perceptron based predictor
   ghistory = 0;
   ghistory_truncate = (1<<ghistoryBits) - 1;
+  perceptron_idx_truncate = (1<<pcIndexBits) - 1;
+
+  // Initialize One Perceptron per PC Index
+  perceptron = (int **) malloc((1 << pcIndexBits)*sizeof(int *));
+  for(int i = 0; i <  (1 << pcIndexBits); i++){
+    perceptron[i] = (int *) malloc((ghistoryBits+1)*sizeof(int));
+    for(int j = 0; j < ghistoryBits + 1; j++){
+      perceptron[i][j] = 0;
+    }
+  }
+
+  // Initializing Global History i.e Input Features to Perceptron
+  global_history_feat = (int *) malloc(ghistoryBits*sizeof(int));
+  for(int i = 0; i < ghistoryBits; i++){
+    global_history_feat[i] = -1;
+  }
 }
 
 void init_predictor()
@@ -160,10 +176,22 @@ uint8_t prediction_tournament(uint32_t pc)
 
 uint8_t prediction_custom(uint32_t pc)
 {
-  return TAKEN;
+  unsigned int perceptron_idx = (pc ^ ghistory) & perceptron_idx_truncate;
+  perceptron_output = 0;
+
+  // Computing Activation of the Perceptron
+  for (int i = 0; i < ghistoryBits; i++){
+    perceptron_output += perceptron[perceptron_idx][i] * global_history_feat[i];
+  }
+  perceptron_output += perceptron[perceptron_idx][ghistoryBits]; // Bias
+  
+  // Making Prediction based on Activation
+  if (perceptron_output >= 0){
+    return TAKEN;
+  }
+  else return NOTTAKEN;
 }
 
-//
 uint8_t make_prediction(uint32_t pc)
 {
   // Make a prediction based on the bpType
@@ -258,7 +286,60 @@ void train_tournament(uint32_t pc, uint8_t outcome)
 
 void train_custom(uint32_t pc, uint8_t outcome)
 {
-  int x =  3;
+  unsigned int perceptron_idx = (pc ^ ghistory) & perceptron_idx_truncate;
+  uint8_t pred = perceptron_output >= 0 ? TAKEN : NOTTAKEN;
+  unsigned int threshold = 1.93 * ghistoryBits + 14;
+
+  // Update Rule Presented in the Paper
+  if(outcome != pred || abs(perceptron_output) <= threshold){
+    for (int i = 0; i < ghistoryBits; i++){
+      if (abs(perceptron[perceptron_idx][i]) < threshold){
+          perceptron[perceptron_idx][i] += ((outcome==TAKEN)? 1 :-1)*global_history_feat[i];
+        }
+    }
+      perceptron[perceptron_idx][ghistoryBits] += (outcome==TAKEN)? 1 :-1;
+  }
+
+  // if (outcome == TAKEN && perceptron_output < 0){
+    
+  //   // Updating Weights
+  //   for (int j = 0; j < ghistoryBits; j++){
+  //     if (global_history_feat[j] == 1 && perceptron[perceptron_idx][j] < 63){
+  //         perceptron[perceptron_idx][j]++;
+  //       }
+  //     else if (global_history_feat[j] == -1 && perceptron[perceptron_idx][j] > -64){
+  //         perceptron[perceptron_idx][j]--;
+  //       }
+  //   }
+  //   // Updating Bias
+  //   if (perceptron[perceptron_idx][ghistoryBits] < 63){
+  //     perceptron[perceptron_idx][ghistoryBits]++;
+  //   }
+  // }
+  // else if (outcome == NOTTAKEN && perceptron_output >= 0){
+  //   for (int j = 0; j < ghistoryBits; j++){
+  //     if (global_history_feat[j] == 1 && perceptron[perceptron_idx][j] > -64){
+  //         perceptron[perceptron_idx][j]--;
+  //       }
+  //     else if (global_history_feat[j] == -1 && perceptron[perceptron_idx][j] < 63){
+  //         perceptron[perceptron_idx][j]++;
+  //       }
+  //   }
+  //   if (perceptron[perceptron_idx][ghistoryBits] > -64){
+  //     perceptron[perceptron_idx][ghistoryBits]--;
+  //   }
+  // }
+
+  // Update the global history
+  // Shift the global history to the left by 1 and add the outcome
+  // And truncate the global history to the number of bits
+  for (int j = ghistoryBits-1; j > 0; j--){
+    global_history_feat[j] = global_history_feat[j-1];
+  }
+  global_history_feat[0] = (outcome==TAKEN)? 1 : -1;
+
+  ghistory = (ghistory << 1) | outcome;
+  ghistory = ghistory & ghistory_truncate;
 }
 
 void train_predictor(uint32_t pc, uint8_t outcome)
