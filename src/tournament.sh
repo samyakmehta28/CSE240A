@@ -7,7 +7,7 @@ EXECUTABLE="./predictor.exe"
 ZIPPED_FILES=("fp_1.bz2" "fp_2.bz2" "int_1.bz2"  "int_2.bz2" "mm_1.bz2" "mm_2.bz2")
 
 # List of parameters to pass to the executable
-PARAMS=("5" "10" "13" "15" "20" "25")
+PARAMS=("9:10:5" "9:10:10" "9:10:15" "9:10:20" "9:10:25")
 
 # Make the executable
 # echo "Make the Predictor executable"
@@ -18,9 +18,9 @@ for ((i=0; i<${#ZIPPED_FILES[@]}; i++)); do
     echo "Executing on ${ZIPPED_FILES[i]}"
     for ((j=0; j<${#PARAMS[@]}; j++)); do
         # Print a message indicating the start of execution
-        echo "Predictor: --gshare:${PARAMS[j]}"
+        echo "Predictor: --tournament:${PARAMS[j]}"
         # Run the executable with the corresponding parameter
-        bunzip2 -kc "../traces/${ZIPPED_FILES[i]}" | $EXECUTABLE --gshare:"${PARAMS[j]}"
+        bunzip2 -kc "../traces/${ZIPPED_FILES[i]}" | $EXECUTABLE --tournament:"${PARAMS[j]}"
         # Print a newline for better separation of outputs
         echo
     done

@@ -288,7 +288,7 @@ void train_custom(uint32_t pc, uint8_t outcome)
 {
   unsigned int perceptron_idx = (pc ^ ghistory) & perceptron_idx_truncate;
   uint8_t pred = perceptron_output >= 0 ? TAKEN : NOTTAKEN;
-  unsigned int threshold = 1.93 * ghistoryBits + 14;
+  unsigned int threshold = 1.93 * ghistoryBits +14;
 
   // Update Rule Presented in the Paper
   if(outcome != pred || abs(perceptron_output) <= threshold){
